@@ -1,10 +1,8 @@
 #ifndef THREAD_POOL_H_INC
 #define THREAD_POOL_H_INC
 
-#include <thread>
-#include <vector>
-#include <mutex>
-#include <condition_variable>
+#include <memory>
+#include <functional>
 
 namespace ThreadPool{
     class ThreadPool{
@@ -30,16 +28,21 @@ namespace ThreadPool{
              */
             void create(size_t threadCount);
 
-
+            /**
+             * @brief This function is called when u want to stop all thread and 
+             *         clear thread pool.
+             * 
+             */
             void destroy();
+
+            /**
+             * @brief Add new task to the task queue
+             * 
+             */
+            void enqueueTask(std::function<void()>);
         private:
-            std::vector<std::thread> mPool;
-            bool terminate;
-            std::condition_variable condition;
-            std::mutex mutex;
-            void threadFunction(void);
-
-
+            struct impl;
+            std::unique_ptr<impl> pimpl;
     };
 }
 
