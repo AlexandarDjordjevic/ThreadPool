@@ -1,30 +1,14 @@
 #include <ThreadPool/ThreadPool.hpp>
 
-#include <thread>
-#include <vector>
-#include <mutex>
-#include <queue>
-#include <condition_variable>
-
 //Remove cout
 #include <iostream>
 
 namespace ThreadPool
 {
 
-    struct ThreadPool::impl
-    {
-        std::vector<std::thread> workers;
-        bool terminate;
-        std::condition_variable condition;
-        std::mutex mutex;
-        std::queue<std::shared_ptr<Task>> taskQueue;
-    };
-
     ThreadPool::ThreadPool()
-        : pimpl(new ThreadPool::impl)
     {
-        pimpl->terminate = false;
+        terminate = false;
     }
 
     ThreadPool::~ThreadPool() = default;
@@ -39,14 +23,14 @@ namespace ThreadPool
         int threadId = 0;
         for (size_t i = 0; i < threadCount; i++)
         {
-            pimpl->workers.push_back(std::thread([&, threadId]() {
+            workers.push_back(std::thread([&, threadId]() {
                 while (true)
                 {
                     std::shared_ptr<Task> task;
                     {
-                        std::unique_lock<std::mutex> lock(pimpl->mutex);
-                        pimpl->condition.wait(lock, [this]() { return pimpl->terminate || !pimpl->taskQueue.empty(); });
-                        if (pimpl->terminate)
+                        std::unique_lock<std::mutex> lock(mutex);
+                        condition.wait(lock, [this]() { return terminate || !taskQueue.empty(); });
+                        if (terminate)
                         {
                             std::cout << "Terminating thread ID: " << threadId << std::endl;
                             break;
@@ -54,8 +38,8 @@ namespace ThreadPool
                         else
                         {
                             std::cout << "Unlocked thread (ID - " << threadId << ")" << std::endl;
-                            task = pimpl->taskQueue.front();
-                            pimpl->taskQueue.pop();
+                            task = taskQueue.front();
+                            taskQueue.pop();
                         }
                     }
                     (*task).execute();
@@ -68,12 +52,12 @@ namespace ThreadPool
     void ThreadPool::destroy()
     {
         {
-            std::unique_lock<std::mutex> lock(pimpl->mutex);
-            pimpl->terminate = true;
-            pimpl->condition.notify_all();
+            std::unique_lock<std::mutex> lock(mutex);
+            terminate = true;
+            condition.notify_all();
         }
 
-        for (auto &thread : pimpl->workers)
+        for (auto &thread : workers)
         {
             if (thread.joinable())
             {
@@ -81,12 +65,12 @@ namespace ThreadPool
             }
         }
 
-        pimpl->workers.clear();
+        workers.clear();
     }
 
-      void ThreadPool::enqueueTask1(func_t funk, char x, int y)
-    {
-        funk(x, y);
-    }
+    // void ThreadPool::enqueueTask1(func_t funk, char x, int y)
+    // {
+    //     funk(x, y);
+    // }
 
 } // namespace ThreadPool

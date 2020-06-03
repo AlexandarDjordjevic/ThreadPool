@@ -4,7 +4,11 @@
 #include <memory>
 #include <future>
 #include <functional>
-
+#include <thread>
+#include <vector>
+#include <mutex>
+#include <queue>
+#include <condition_variable>
 namespace ThreadPool
 {
     class ThreadPool
@@ -44,19 +48,15 @@ namespace ThreadPool
              */
 
         template <typename F, typename... Args>
-        void enqueueTask(F &&func, Args... args)
+        void enqueueTask(F &&f, Args &&... args)
         {
-            // std::packaged_task<void()> task(std::bind(func, args...));
-            // std::unique_lock<std::mutex> lock(pimpl->mutex);
-            // pimpl->taskQueue.push(std::make_shared<Task>(std::move(task)));
-            // pimpl->condition.notify_one();
-            //int dummy[sizeof...(Args)] = {(args, 0)...};
+            std::packaged_task<void()> task(std::move(std::bind(f, args...)));
+            std::unique_lock<std::mutex> lock(mutex);
+            taskQueue.push(std::make_shared<Task>(std::move(task)));
+            condition.notify_one();
         }
 
     private:
-        struct impl;
-        std::unique_ptr<impl> pimpl;
-
         class Task
         {
         private:
@@ -70,6 +70,12 @@ namespace ThreadPool
                 func();
             }
         };
+
+        std::vector<std::thread> workers;
+        bool terminate;
+        std::condition_variable condition;
+        std::mutex mutex;
+        std::queue<std::shared_ptr<Task>> taskQueue;
     };
 } // namespace ThreadPool
 

@@ -37,14 +37,6 @@ void Task3()
     }
 }
 
-template <class... Ts>
-void f(Ts... args)
-{
-    // since initializer lists guarantee sequencing, this can be used to
-    // call a function on each element of a pack, in order:
-    int dummy[sizeof...(Ts)] = {(args, 0)...};
-}
-
 int main()
 {
 
@@ -56,8 +48,8 @@ int main()
 
     threadPool.create(4);
 
-    threadPool.enqueueTask(1, 2, 3, 4);
-    threadPool.f(1, 2, 3, 4, 5);
+    threadPool.enqueueTask(Task1, '1', 2);
+    threadPool.enqueueTask(Task2, "Hello World");
     //threadPool.enqueueTask(Task2, "Hello World");
 
     std::cin >>
