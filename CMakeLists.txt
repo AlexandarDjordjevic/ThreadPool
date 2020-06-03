@@ -14,8 +14,7 @@ set(Include
     include/ThreadPool/ThreadPool.hpp
 )
 
-#add_library(${this} SHARED main.cpp ${Src})
-add_executable(${this} main.cpp ${Src})
+add_library(${this} STATIC ${Src})
 
 set_target_properties(${this} PROPERTIES
     FOLDER Libraries
@@ -24,4 +23,6 @@ set_target_properties(${this} PROPERTIES
 target_include_directories(${this} PUBLIC include)
 
 target_link_libraries(${this} pthread)
+
+add_subdirectory(tests)
 

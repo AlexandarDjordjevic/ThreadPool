@@ -1,8 +1,5 @@
 #include <ThreadPool/ThreadPool.hpp>
 
-//Remove cout
-#include <iostream>
-
 namespace ThreadPool
 {
 
@@ -11,7 +8,9 @@ namespace ThreadPool
         terminate = false;
     }
 
-    ThreadPool::~ThreadPool() = default;
+    ThreadPool::~ThreadPool(){
+        destroy();
+    };
 
     size_t ThreadPool::getMaxThreadCount()
     {
@@ -32,12 +31,10 @@ namespace ThreadPool
                         condition.wait(lock, [this]() { return terminate || !taskQueue.empty(); });
                         if (terminate)
                         {
-                            std::cout << "Terminating thread ID: " << threadId << std::endl;
                             break;
                         }
                         else
                         {
-                            std::cout << "Unlocked thread (ID - " << threadId << ")" << std::endl;
                             task = taskQueue.front();
                             taskQueue.pop();
                         }
@@ -67,10 +64,5 @@ namespace ThreadPool
 
         workers.clear();
     }
-
-    // void ThreadPool::enqueueTask1(func_t funk, char x, int y)
-    // {
-    //     funk(x, y);
-    // }
 
 } // namespace ThreadPool
