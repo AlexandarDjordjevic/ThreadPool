@@ -48,23 +48,38 @@ namespace ThreadPool
              */
 
         template <typename F, typename... Args>
-        void enqueueTask(F &&f, Args &&... args)
+        auto enqueueTask(F &&f, Args &&... args)
         {
-            std::packaged_task<void()> task(std::move(std::bind(f, args...)));
+            typedef decltype(f(args...)) retType;
+            std::packaged_task<retType()> task(std::move(std::bind(f, args...)));
             std::unique_lock<std::mutex> lock(mutex);
-            taskQueue.push(std::make_shared<Task>(std::move(task)));
+
+            std::future<retType> future = task.get_future();
+            taskQueue.push(std::make_shared<Task<retType>>(std::move(task)));
             condition.notify_one();
+
+            return future;
         }
 
     private:
-        class Task
+        class ITask
         {
         private:
             std::packaged_task<void()> func;
 
         public:
+            virtual ~ITask(){};
+            virtual void execute() = 0;
+        };
+        template <typename RetType>
+        class Task : public ITask
+        {
+        private:
+            std::packaged_task<RetType()> func;
+
+        public:
             virtual ~Task() {}
-            explicit Task(std::packaged_task<void()> func) : func(std::move(func)) {}
+            explicit Task(std::packaged_task<RetType()> func) : func(std::move(func)) {}
             void execute()
             {
                 func();
@@ -75,7 +90,7 @@ namespace ThreadPool
         bool terminate;
         std::condition_variable condition;
         std::mutex mutex;
-        std::queue<std::shared_ptr<Task>> taskQueue;
+        std::queue<std::shared_ptr<ITask>> taskQueue;
     };
 } // namespace ThreadPool
 

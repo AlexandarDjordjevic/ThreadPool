@@ -26,7 +26,7 @@ namespace ThreadPool
             workers.push_back(std::thread([&, threadId]() {
                 while (true)
                 {
-                    std::shared_ptr<Task> task;
+                    std::shared_ptr<ITask> task;
                     {
                         std::unique_lock<std::mutex> lock(mutex);
                         condition.wait(lock, [this]() { return terminate || !taskQueue.empty(); });

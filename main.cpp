@@ -4,7 +4,7 @@
 
 #include <thread>
 
-void Task1(char x, int y)
+int Task1(char x, int y)
 {
     int i = 0;
     while (i < 5)
@@ -13,6 +13,7 @@ void Task1(char x, int y)
         std::cout << "This is task 1. X: " << x << " Y:" << y << std::endl;
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
+    return 11;
 }
 
 void Task2(std::string msg)
@@ -48,9 +49,9 @@ int main()
 
     threadPool.create(4);
 
-    threadPool.enqueueTask(Task1, '1', 2);
+    auto retValue = threadPool.enqueueTask(Task1, '1', 2);
     threadPool.enqueueTask(Task2, "Hello World");
-    //threadPool.enqueueTask(Task2, "Hello World");
+    std::cout << "retValue " << retValue.get() << std::endl;
 
     std::cin >>
         Input;
