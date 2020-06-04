@@ -8,7 +8,8 @@ namespace ThreadPool
         terminate = false;
     }
 
-    ThreadPool::~ThreadPool(){
+    ThreadPool::~ThreadPool()
+    {
         destroy();
     };
 
