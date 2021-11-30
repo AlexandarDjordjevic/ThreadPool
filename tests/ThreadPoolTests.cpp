@@ -1,27 +1,38 @@
+#include <gmock/gmock-actions.h>
+#include <gmock/gmock-function-mocker.h>
+#include <gmock/gmock-spec-builders.h>
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include <ThreadPool/ThreadPool.hpp>
+#include <utils/ThreadPool.hpp>
 
 #include <iostream>
 
-namespace{
-    int task0Var = 0;
-    void task0(){task0Var = 1;}
-    int task1(int x){return x;};
-}
+class MockObject {
+public:
+    MOCK_METHOD(void, do_stuff_1, ());
+    MOCK_METHOD(void, do_stuff_2, (int));
+};
 
-TEST(ThreadPool, TestVoidFuncVoid){
-    ThreadPool::ThreadPool threadPool;
+class TestThreadPool : public testing::Test {
+public:
+    utils::ThreadPool threadPool;
+};
+
+TEST_F(TestThreadPool, TestVoidFuncVoid) {
+    MockObject obj;
     threadPool.create(1);
-    auto future = threadPool.enqueueTask(task0);
+    EXPECT_CALL(obj, do_stuff_1);
+    auto future = threadPool.enqueue_task([&obj]() { obj.do_stuff_1(); });
     future.get();
-    EXPECT_EQ(task0Var, 1);
 }
 
-TEST(ThreadPool, TestIntFuncInt){
-    ThreadPool::ThreadPool threadPool;
-    threadPool.create(5);
-    auto future = threadPool.enqueueTask(task1, 1);
-    int result = future.get();
-    EXPECT_EQ(result, 1);
+TEST_F(TestThreadPool, TestIntFuncInt) {
+    MockObject obj;
+    threadPool.create(2);
+    EXPECT_CALL(obj, do_stuff_1);
+    EXPECT_CALL(obj, do_stuff_2(10));
+    auto future_1 = threadPool.enqueue_task([&obj]() { obj.do_stuff_1(); });
+    auto future_2 = threadPool.enqueue_task([&obj](int x) { obj.do_stuff_2(x); }, 10);
+    future_1.get();
+    future_2.get();
 }

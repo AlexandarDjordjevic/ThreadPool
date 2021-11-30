@@ -10,15 +10,7 @@ set(Src
     src/ThreadPool.cpp
 )
 
-set(Include 
-    include/ThreadPool/ThreadPool.hpp
-)
-
 add_library(${this} STATIC ${Src})
-
-set_target_properties(${this} PROPERTIES
-    FOLDER Libraries
-)
 
 target_include_directories(${this} PUBLIC include)
 

@@ -1,69 +1,59 @@
-#include <ThreadPool/ThreadPool.hpp>
+#include <mutex>
+#include <thread>
+#include <utility>
+#include <utils/ThreadPool.hpp>
 
-namespace ThreadPool
-{
+namespace utils {
 
-    ThreadPool::ThreadPool()
-    {
-        terminate = false;
-    }
+ThreadPool::ThreadPool() : m_terminate{false} {}
 
-    ThreadPool::~ThreadPool()
-    {
-        destroy();
-    };
+ThreadPool::~ThreadPool() { stop(); }
 
-    size_t ThreadPool::getMaxThreadCount()
-    {
-        return std::thread::hardware_concurrency();
-    }
+void ThreadPool::create(size_t thread_count) {
+    m_workers.resize(thread_count);
+    for (auto i{0}; i < thread_count; i++) {
+        m_workers.emplace_back([this]() {
+            while (true) {
+                auto terminate{false};
+                std::shared_ptr<ITask> task;
 
-    void ThreadPool::create(size_t threadCount)
-    {
-        int threadId = 0;
-        for (size_t i = 0; i < threadCount; i++)
-        {
-            workers.push_back(std::thread([&, threadId]() {
-                while (true)
-                {
-                    std::shared_ptr<ITask> task;
-                    {
-                        std::unique_lock<std::mutex> lock(mutex);
-                        condition.wait(lock, [this]() { return terminate || !taskQueue.empty(); });
-                        if (terminate)
-                        {
-                            break;
-                        }
-                        else
-                        {
-                            task = taskQueue.front();
-                            taskQueue.pop();
-                        }
+                auto get_task{[this]() -> std::pair<bool, std::shared_ptr<ITask>> {
+                    std::unique_lock<std::mutex> lock(m_mtx);
+                    m_cv.wait(lock, [this]() { return m_terminate || !m_task_queue.empty(); });
+                    if (m_terminate) {
+                        return {true, nullptr};
                     }
-                    (*task).execute();
+                    auto task{m_task_queue.front()};
+                    m_task_queue.pop();
+                    return {false, task};
+                }};
+
+                std::tie(terminate, task) = get_task();
+
+                if (terminate) {
+                    break;
                 }
-            }));
-            threadId++;
-        }
-    }
-
-    void ThreadPool::destroy()
-    {
-        {
-            std::unique_lock<std::mutex> lock(mutex);
-            terminate = true;
-            condition.notify_all();
-        }
-
-        for (auto &thread : workers)
-        {
-            if (thread.joinable())
-            {
-                thread.join();
+                task->execute();
             }
-        }
+        });
+    }
+}
 
-        workers.clear();
+void ThreadPool::stop() {
+    {
+        std::unique_lock<std::mutex> lock(m_mtx);
+        m_terminate = true;
+        m_cv.notify_all();
     }
 
-} // namespace ThreadPool
+    for (auto& thread : m_workers) {
+        if (thread.joinable()) {
+            thread.join();
+        }
+    }
+
+    m_workers.clear();
+}
+
+
+} // namespace utils
